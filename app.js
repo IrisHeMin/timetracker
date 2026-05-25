@@ -68,7 +68,7 @@ function start(name, category){
   const qs=loadQuicks();
   if(!qs.includes(name)){ qs.unshift(name); saveQuicks(qs); }
   $('taskName').value='';
-  renderRunning(); renderQuicks(); renderTodayList();
+  renderRunning(); renderTodayList();
 }
 function stop(){
   const r=loadRunning();
@@ -107,14 +107,8 @@ function renderRunning(){
 
 function escapeHtml(s){return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 
-// ===== Quick picks =====
-function renderQuicks(){
-  const qs=loadQuicks();
-  $('quickPicks').innerHTML='<small style="color:var(--muted)">快捷：</small> '+qs.map(q=>`<span data-q="${escapeHtml(q)}">${escapeHtml(q)}</span>`).join('');
-  $('quickPicks').querySelectorAll('span[data-q]').forEach(el=>{
-    el.onclick=()=>{ $('taskName').value=el.dataset.q; $('taskName').focus(); };
-  });
-}
+// ===== Quick picks (removed) =====
+function renderQuicks(){ /* no-op */ }
 
 // ===== Today list =====
 function renderTodayList(){
