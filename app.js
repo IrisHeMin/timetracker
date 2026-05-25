@@ -33,6 +33,46 @@ const CAT_LABEL = {work:'工作', break:'休息', study:'学习', other:'其他'
 const CAT_COLOR = {work:'#38bdf8', break:'#eab308', study:'#a78bfa', other:'#94a3b8'};
 const tagClassFor = (cat)=>cat==='work'?'tag-work':cat==='break'?'tag-break':cat==='study'?'tag-study':'tag-other';
 
+// Case ID detection: 14-18 consecutive digits anywhere in the task name
+const CASE_ID_RE = /\b\d{14,18}\b/g;
+function extractCaseIds(name){
+  if(!name) return [];
+  const matches = String(name).match(CASE_ID_RE);
+  return matches ? [...new Set(matches)] : [];
+}
+function aggregateByCase(entries){
+  const map=new Map();
+  for(const e of entries){
+    const ids=extractCaseIds(e.name);
+    if(ids.length===0) continue;
+    const dur=e.end-e.start;
+    for(const id of ids){
+      if(!map.has(id)) map.set(id,{id,count:0,total:0,names:new Set()});
+      const g=map.get(id);
+      g.count++; g.total+=dur; g.names.add(e.name);
+    }
+  }
+  return [...map.values()].sort((a,b)=>b.total-a.total);
+}
+function renderCaseTable(tbody, entries, maxNames){
+  const rows=aggregateByCase(entries);
+  if(rows.length===0){
+    tbody.innerHTML='<tr><td colspan="4" style="color:var(--muted)">无 Case ID 记录（任务名里包含 14-18 位数字即可被识别）</td></tr>';
+    return;
+  }
+  tbody.innerHTML=rows.map(g=>{
+    const names=[...g.names];
+    const shown = maxNames ? names.slice(0,maxNames) : names;
+    const more = names.length>shown.length ? ` <span style="color:var(--muted)">+${names.length-shown.length}</span>` : '';
+    return `<tr>
+      <td style="font-family:'Consolas',monospace;color:var(--accent);font-weight:600">${g.id}</td>
+      <td>${g.count}</td>
+      <td class="dur">${fmtHM(g.total)}</td>
+      <td style="color:var(--muted);font-size:13px">${shown.map(escapeHtml).join(' · ')}${more}</td>
+    </tr>`;
+  }).join('');
+}
+
 function loadEntries(){ try{return JSON.parse(localStorage.getItem(LS_ENTRIES)||'[]')}catch(e){return []} }
 function saveEntries(arr){ localStorage.setItem(LS_ENTRIES, JSON.stringify(arr)) }
 function loadRunning(){ try{return JSON.parse(localStorage.getItem(LS_RUNNING)||'null')}catch(e){return null} }
@@ -176,6 +216,9 @@ function renderToday(){
     data:{labels,datasets:[{label:'分钟',data,backgroundColor:'#38bdf8'}]},
     options:{plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#94a3b8'}},y:{ticks:{color:'#94a3b8'}}}}
   });
+
+  // case id aggregation (today)
+  renderCaseTable($('todayCaseTable').querySelector('tbody'), entries, 5);
 }
 
 // ===== Trends =====
@@ -230,6 +273,9 @@ function renderTrends(){
     ]},
     options:{responsive:true,plugins:{legend:{labels:{color:'#e2e8f0'}}},scales:{x:{stacked:true,ticks:{color:'#94a3b8'}},y:{stacked:true,ticks:{color:'#94a3b8'}}}}
   });
+
+  // case id aggregation (range)
+  renderCaseTable($('trendCaseTable').querySelector('tbody'), entries, 3);
 
   // top tasks
   const map=new Map();
