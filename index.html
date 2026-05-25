@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Time Tracker</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  :root {
+    --bg:#0f172a; --panel:#1e293b; --accent:#38bdf8; --text:#e2e8f0;
+    --muted:#94a3b8; --green:#22c55e; --red:#ef4444; --yellow:#eab308;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+  header{padding:16px 24px;background:var(--panel);display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #334155}
+  header h1{margin:0;font-size:20px;color:var(--accent)}
+  nav button{background:transparent;border:1px solid #334155;color:var(--text);padding:6px 14px;margin-left:8px;border-radius:6px;cursor:pointer}
+  nav button.active{background:var(--accent);color:#0f172a;border-color:var(--accent)}
+  main{padding:24px;max-width:1100px;margin:0 auto}
+  .card{background:var(--panel);border-radius:10px;padding:20px;margin-bottom:20px;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+  .timer-box{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  .timer-box input[type=text]{flex:1;min-width:220px;background:#0f172a;border:1px solid #334155;color:var(--text);padding:12px;border-radius:6px;font-size:15px}
+  .timer-box select{background:#0f172a;border:1px solid #334155;color:var(--text);padding:12px;border-radius:6px;font-size:15px}
+  .btn{padding:12px 22px;border:none;border-radius:6px;font-size:15px;font-weight:600;cursor:pointer;color:#fff}
+  .btn-start{background:var(--green)}
+  .btn-stop{background:var(--red)}
+  .btn-secondary{background:#475569}
+  .running{display:flex;justify-content:space-between;align-items:center;padding:14px;background:#0f172a;border:1px solid var(--green);border-radius:8px;margin-top:14px}
+  .running .name{font-weight:600;color:var(--accent)}
+  .running .elapsed{font-family:'Consolas',monospace;font-size:22px;color:var(--green)}
+  .tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;margin-left:6px}
+  .tag-work{background:#1e40af}
+  .tag-break{background:#a16207}
+  .tag-other{background:#475569}
+  table{width:100%;border-collapse:collapse;margin-top:10px}
+  th,td{padding:10px;text-align:left;border-bottom:1px solid #334155;font-size:14px}
+  th{color:var(--muted);font-weight:500}
+  td.dur{font-family:'Consolas',monospace;color:var(--accent)}
+  .summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:18px}
+  .stat{background:#0f172a;border:1px solid #334155;padding:14px;border-radius:8px}
+  .stat .label{color:var(--muted);font-size:12px;text-transform:uppercase}
+  .stat .value{font-size:24px;font-weight:600;margin-top:4px;color:var(--accent)}
+  .row-actions button{background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:13px;margin-right:6px}
+  .row-actions button:hover{color:var(--red)}
+  .hidden{display:none}
+  #chartArea{height:340px}
+  .quick{margin-top:10px}
+  .quick span{display:inline-block;padding:4px 10px;margin:3px;background:#0f172a;border:1px solid #334155;border-radius:14px;font-size:12px;cursor:pointer}
+  .quick span:hover{background:var(--accent);color:#0f172a}
+  .toolbar{display:flex;gap:10px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
+  input[type=date]{background:#0f172a;border:1px solid #334155;color:var(--text);padding:8px;border-radius:6px}
+</style>
+</head>
+<body>
+<header>
+  <h1>⏱ Time Tracker</h1>
+  <nav>
+    <button data-tab="tracker" class="active">追踪</button>
+    <button data-tab="today">今日</button>
+    <button data-tab="trends">趋势</button>
+    <button data-tab="data">数据</button>
+  </nav>
+</header>
+<main>
+
+  <!-- TRACKER TAB -->
+  <section id="tab-tracker">
+    <div class="card">
+      <h3 style="margin-top:0">开始一项任务</h3>
+      <div class="timer-box">
+        <input type="text" id="taskName" placeholder="例如: Case 12345 - 看 NDIS 日志" autofocus>
+        <select id="taskCategory">
+          <option value="work">工作</option>
+          <option value="break">休息</option>
+          <option value="other">其他</option>
+        </select>
+        <button class="btn btn-start" id="startBtn">▶ Start</button>
+      </div>
+      <div class="quick" id="quickPicks"></div>
+      <div id="runningBox"></div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-top:0">🍅 番茄钟 <small style="color:var(--muted);font-weight:normal">(可选)</small></h3>
+      <div class="timer-box">
+        <label style="color:var(--muted)">工作 <input type="number" id="pomoWork" value="25" min="1" max="120" style="width:60px;background:#0f172a;border:1px solid #334155;color:var(--text);padding:6px;border-radius:6px"> 分</label>
+        <label style="color:var(--muted)">休息 <input type="number" id="pomoBreak" value="5" min="1" max="60" style="width:60px;background:#0f172a;border:1px solid #334155;color:var(--text);padding:6px;border-radius:6px"> 分</label>
+        <label style="color:var(--muted)">长休 <input type="number" id="pomoLong" value="15" min="1" max="60" style="width:60px;background:#0f172a;border:1px solid #334155;color:var(--text);padding:6px;border-radius:6px"> 分 / 每 <input type="number" id="pomoCycle" value="4" min="2" max="10" style="width:50px;background:#0f172a;border:1px solid #334155;color:var(--text);padding:6px;border-radius:6px"> 个</label>
+        <label style="color:var(--muted)"><input type="checkbox" id="pomoAutoLink" checked> 联动任务计时</label>
+      </div>
+      <div id="pomoBox" style="margin-top:14px"></div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-top:0">今日记录</h3>
+      <div id="todayList"></div>
+    </div>
+  </section>
+
+  <!-- TODAY SUMMARY TAB -->
+  <section id="tab-today" class="hidden">
+    <div class="card">
+      <h3 style="margin-top:0">今日汇总</h3>
+      <div class="summary-grid" id="todayStats"></div>
+      <canvas id="todayChart" height="120"></canvas>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">按任务名分组</h3>
+      <table id="todayGroupTable">
+        <thead><tr><th>任务</th><th>分类</th><th>次数</th><th>总时长</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- TRENDS TAB -->
+  <section id="tab-trends" class="hidden">
+    <div class="card">
+      <div class="toolbar">
+        <label>从 <input type="date" id="trendFrom"></label>
+        <label>到 <input type="date" id="trendTo"></label>
+        <button class="btn btn-secondary" id="trendRefresh">刷新</button>
+        <button class="btn btn-secondary" id="trendWeek">最近 7 天</button>
+        <button class="btn btn-secondary" id="trendMonth">最近 30 天</button>
+      </div>
+      <div class="summary-grid" id="trendStats"></div>
+      <canvas id="trendChart" height="100"></canvas>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">任务排行</h3>
+      <table id="trendTopTable">
+        <thead><tr><th>#</th><th>任务</th><th>分类</th><th>总时长</th><th>占比</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- DATA TAB -->
+  <section id="tab-data" class="hidden">
+    <div class="card">
+      <h3 style="margin-top:0">数据管理</h3>
+      <p style="color:var(--muted)">所有数据存储在浏览器 localStorage 中。建议定期导出备份。</p>
+      <button class="btn btn-secondary" id="exportBtn">⬇ 导出 JSON</button>
+      <button class="btn btn-secondary" id="importBtn">⬆ 导入 JSON</button>
+      <input type="file" id="importFile" accept="application/json" style="display:none">
+      <button class="btn btn-secondary" id="exportCsvBtn">⬇ 导出 CSV</button>
+      <button class="btn" style="background:#7f1d1d" id="clearBtn">🗑 清空全部</button>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">全部历史 (最近 200 条)</h3>
+      <table id="allTable">
+        <thead><tr><th>开始</th><th>结束</th><th>任务</th><th>分类</th><th>时长</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>
