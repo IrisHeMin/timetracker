@@ -28,6 +28,11 @@ const todayKey = (ts=Date.now())=>{
 };
 const isSameDay = (a,b)=>todayKey(a)===todayKey(b);
 
+// Category helpers
+const CAT_LABEL = {work:'工作', break:'休息', study:'学习', other:'其他'};
+const CAT_COLOR = {work:'#38bdf8', break:'#eab308', study:'#a78bfa', other:'#94a3b8'};
+const tagClassFor = (cat)=>cat==='work'?'tag-work':cat==='break'?'tag-break':cat==='study'?'tag-study':'tag-other';
+
 function loadEntries(){ try{return JSON.parse(localStorage.getItem(LS_ENTRIES)||'[]')}catch(e){return []} }
 function saveEntries(arr){ localStorage.setItem(LS_ENTRIES, JSON.stringify(arr)) }
 function loadRunning(){ try{return JSON.parse(localStorage.getItem(LS_RUNNING)||'null')}catch(e){return null} }
@@ -87,10 +92,10 @@ function renderRunning(){
   const box=$('runningBox');
   const r=loadRunning();
   if(!r){ box.innerHTML=''; if(tickHandle){clearInterval(tickHandle);tickHandle=null;} return; }
-  const tagClass = r.category==='work'?'tag-work':r.category==='break'?'tag-break':'tag-other';
+  const tagClass = tagClassFor(r.category);
   const update = ()=>{
     box.innerHTML=`<div class="running">
-      <div><span class="name">${escapeHtml(r.name)}</span><span class="tag ${tagClass}">${r.category}</span><br><small style="color:var(--muted)">开始于 ${fmtTime(r.start)}</small></div>
+      <div><span class="name">${escapeHtml(r.name)}</span><span class="tag ${tagClass}">${CAT_LABEL[r.category]||r.category}</span><br><small style="color:var(--muted)">开始于 ${fmtTime(r.start)}</small></div>
       <div><span class="elapsed">${fmtDur(Date.now()-r.start)}</span> <button class="btn btn-stop" id="stopBtn">⏹ Stop</button></div>
     </div>`;
     $('stopBtn').onclick=stop;
@@ -120,12 +125,12 @@ function renderTodayList(){
   }
   let html='<table><thead><tr><th>开始</th><th>结束</th><th>任务</th><th>分类</th><th>时长</th><th></th></tr></thead><tbody>';
   for(const e of entries){
-    const tagClass = e.category==='work'?'tag-work':e.category==='break'?'tag-break':'tag-other';
+    const tagClass = tagClassFor(e.category);
     html+=`<tr>
       <td>${fmtTime(e.start)}</td>
       <td>${fmtTime(e.end)}</td>
       <td>${escapeHtml(e.name)}</td>
-      <td><span class="tag ${tagClass}">${e.category}</span></td>
+      <td><span class="tag ${tagClass}">${CAT_LABEL[e.category]||e.category}</span></td>
       <td class="dur">${fmtDur(e.end-e.start)}</td>
       <td class="row-actions"><button data-del="${e.id}">删除</button></td>
     </tr>`;
@@ -141,17 +146,16 @@ function renderTodayList(){
 let todayChartObj=null;
 function renderToday(){
   const entries=loadEntries().filter(e=>isSameDay(e.start, Date.now()));
-  let work=0,brk=0,other=0;
+  const totals={work:0,break:0,study:0,other:0};
   for(const e of entries){
     const d=e.end-e.start;
-    if(e.category==='work') work+=d;
-    else if(e.category==='break') brk+=d;
-    else other+=d;
+    totals[e.category]!==undefined ? totals[e.category]+=d : totals.other+=d;
   }
   $('todayStats').innerHTML=`
-    <div class="stat"><div class="label">工作</div><div class="value">${fmtHM(work)}</div></div>
-    <div class="stat"><div class="label">休息</div><div class="value">${fmtHM(brk)}</div></div>
-    <div class="stat"><div class="label">其他</div><div class="value">${fmtHM(other)}</div></div>
+    <div class="stat"><div class="label">工作</div><div class="value">${fmtHM(totals.work)}</div></div>
+    <div class="stat"><div class="label">学习</div><div class="value">${fmtHM(totals.study)}</div></div>
+    <div class="stat"><div class="label">休息</div><div class="value">${fmtHM(totals.break)}</div></div>
+    <div class="stat"><div class="label">其他</div><div class="value">${fmtHM(totals.other)}</div></div>
     <div class="stat"><div class="label">总记录</div><div class="value">${entries.length}</div></div>
   `;
 
@@ -165,8 +169,8 @@ function renderToday(){
   const groups=[...map.values()].sort((a,b)=>b.total-a.total);
   const tbody=$('todayGroupTable').querySelector('tbody');
   tbody.innerHTML=groups.map(g=>{
-    const tagClass = g.category==='work'?'tag-work':g.category==='break'?'tag-break':'tag-other';
-    return `<tr><td>${escapeHtml(g.name)}</td><td><span class="tag ${tagClass}">${g.category}</span></td><td>${g.count}</td><td class="dur">${fmtHM(g.total)}</td></tr>`;
+    const tagClass = tagClassFor(g.category);
+    return `<tr><td>${escapeHtml(g.name)}</td><td><span class="tag ${tagClass}">${CAT_LABEL[g.category]||g.category}</span></td><td>${g.count}</td><td class="dur">${fmtHM(g.total)}</td></tr>`;
   }).join('') || '<tr><td colspan="4" style="color:var(--muted)">无</td></tr>';
 
   // chart
@@ -199,21 +203,23 @@ function renderTrends(){
   const days=[]; const cur=new Date(from);
   while(cur<=to){ days.push(new Date(cur)); cur.setDate(cur.getDate()+1); }
   const dayLabels=days.map(d=>d.toLocaleDateString([], {month:'numeric',day:'numeric'}));
-  const workArr=Array(days.length).fill(0), brkArr=Array(days.length).fill(0), otherArr=Array(days.length).fill(0);
+  const workArr=Array(days.length).fill(0), brkArr=Array(days.length).fill(0), studyArr=Array(days.length).fill(0), otherArr=Array(days.length).fill(0);
   for(const e of entries){
     const idx=Math.floor((todayKey(e.start)-todayKey(from.getTime()))/86400000);
     if(idx<0||idx>=days.length) continue;
     const dur=(e.end-e.start)/60000;
     if(e.category==='work') workArr[idx]+=dur;
     else if(e.category==='break') brkArr[idx]+=dur;
+    else if(e.category==='study') studyArr[idx]+=dur;
     else otherArr[idx]+=dur;
   }
 
-  let totW=0,totB=0,totO=0;
-  for(let i=0;i<days.length;i++){ totW+=workArr[i]; totB+=brkArr[i]; totO+=otherArr[i]; }
+  let totW=0,totB=0,totS=0,totO=0;
+  for(let i=0;i<days.length;i++){ totW+=workArr[i]; totB+=brkArr[i]; totS+=studyArr[i]; totO+=otherArr[i]; }
   const totalDays=days.length;
   $('trendStats').innerHTML=`
     <div class="stat"><div class="label">总工作</div><div class="value">${fmtHM(totW*60000)}</div></div>
+    <div class="stat"><div class="label">总学习</div><div class="value">${fmtHM(totS*60000)}</div></div>
     <div class="stat"><div class="label">总休息</div><div class="value">${fmtHM(totB*60000)}</div></div>
     <div class="stat"><div class="label">总其他</div><div class="value">${fmtHM(totO*60000)}</div></div>
     <div class="stat"><div class="label">日均工作</div><div class="value">${fmtHM(totW*60000/totalDays)}</div></div>
@@ -223,9 +229,10 @@ function renderTrends(){
   trendChartObj=new Chart($('trendChart'),{
     type:'bar',
     data:{labels:dayLabels,datasets:[
-      {label:'工作(分)',data:workArr.map(v=>Math.round(v)),backgroundColor:'#38bdf8',stack:'s'},
-      {label:'休息(分)',data:brkArr.map(v=>Math.round(v)),backgroundColor:'#eab308',stack:'s'},
-      {label:'其他(分)',data:otherArr.map(v=>Math.round(v)),backgroundColor:'#94a3b8',stack:'s'},
+      {label:'工作(分)',data:workArr.map(v=>Math.round(v)),backgroundColor:CAT_COLOR.work,stack:'s'},
+      {label:'学习(分)',data:studyArr.map(v=>Math.round(v)),backgroundColor:CAT_COLOR.study,stack:'s'},
+      {label:'休息(分)',data:brkArr.map(v=>Math.round(v)),backgroundColor:CAT_COLOR.break,stack:'s'},
+      {label:'其他(分)',data:otherArr.map(v=>Math.round(v)),backgroundColor:CAT_COLOR.other,stack:'s'},
     ]},
     options:{responsive:true,plugins:{legend:{labels:{color:'#e2e8f0'}}},scales:{x:{stacked:true,ticks:{color:'#94a3b8'}},y:{stacked:true,ticks:{color:'#94a3b8'}}}}
   });
@@ -241,9 +248,9 @@ function renderTrends(){
   const top=[...map.values()].sort((a,b)=>b.total-a.total).slice(0,20);
   const tbody=$('trendTopTable').querySelector('tbody');
   tbody.innerHTML=top.map((g,i)=>{
-    const tagClass = g.category==='work'?'tag-work':g.category==='break'?'tag-break':'tag-other';
+    const tagClass = tagClassFor(g.category);
     const pct=(g.total/grandTotal*100).toFixed(1);
-    return `<tr><td>${i+1}</td><td>${escapeHtml(g.name)}</td><td><span class="tag ${tagClass}">${g.category}</span></td><td class="dur">${fmtHM(g.total)}</td><td>${pct}%</td></tr>`;
+    return `<tr><td>${i+1}</td><td>${escapeHtml(g.name)}</td><td><span class="tag ${tagClass}">${CAT_LABEL[g.category]||g.category}</span></td><td class="dur">${fmtHM(g.total)}</td><td>${pct}%</td></tr>`;
   }).join('') || '<tr><td colspan="5" style="color:var(--muted)">无数据</td></tr>';
 }
 
@@ -256,12 +263,12 @@ function renderAll(){
   const entries=loadEntries().sort((a,b)=>b.start-a.start).slice(0,200);
   const tbody=$('allTable').querySelector('tbody');
   tbody.innerHTML=entries.map(e=>{
-    const tagClass = e.category==='work'?'tag-work':e.category==='break'?'tag-break':'tag-other';
+    const tagClass = tagClassFor(e.category);
     return `<tr>
       <td>${fmtDate(e.start)} ${fmtTime(e.start)}</td>
       <td>${fmtTime(e.end)}</td>
       <td>${escapeHtml(e.name)}</td>
-      <td><span class="tag ${tagClass}">${e.category}</span></td>
+      <td><span class="tag ${tagClass}">${CAT_LABEL[e.category]||e.category}</span></td>
       <td class="dur">${fmtDur(e.end-e.start)}</td>
       <td class="row-actions"><button data-del="${e.id}">删除</button></td>
     </tr>`;
@@ -370,28 +377,120 @@ function onPomoComplete(){
   savePomo({phase:nextPhase, start:null, duration:(nextPhase==='work'?c.work:nextPhase==='long'?c.long:c.brk)*60*1000, completed:newCompleted, waiting:true});
   renderPomo();
 }
-function notify(msg){
+// ============ Strong Alert ============
+let alertState = null; // {msg, audioCtx, repeatTimer, notifyTimer, faviconTimer}
+
+function makeFavicon(color){
+  const c=document.createElement('canvas'); c.width=64; c.height=64;
+  const ctx=c.getContext('2d');
+  ctx.fillStyle=color; ctx.beginPath(); ctx.arc(32,32,30,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#fff'; ctx.font='bold 38px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText('🍅',32,34);
+  return c.toDataURL('image/png');
+}
+function setFavicon(href){
+  let link=document.querySelector('link[rel="icon"]');
+  if(!link){ link=document.createElement('link'); link.rel='icon'; document.head.appendChild(link); }
+  link.href=href;
+}
+
+function stopAlert(){
+  if(!alertState) return;
+  clearInterval(alertState.repeatTimer);
+  clearInterval(alertState.notifyTimer);
+  clearInterval(alertState.faviconTimer);
+  try{ alertState.audioCtx && alertState.audioCtx.close(); }catch(e){}
+  document.title = alertState.origTitle || 'Time Tracker';
+  setFavicon(makeFavicon('#38bdf8'));
+  const ov=document.getElementById('alertOverlay'); if(ov) ov.remove();
+  alertState=null;
+}
+
+function playBeepBurst(ctx){
   try{
-    if('Notification' in window){
-      if(Notification.permission==='granted'){ new Notification('Time Tracker', {body:msg}); }
-      else if(Notification.permission!=='denied'){ Notification.requestPermission().then(p=>{if(p==='granted') new Notification('Time Tracker',{body:msg});}); }
-    }
-  }catch(e){}
-  // audible beep
-  try{
-    const ctx=new (window.AudioContext||window.webkitAudioContext)();
-    [0,0.18,0.36].forEach((t,i)=>{
+    [0,0.18,0.36,0.54].forEach((t,i)=>{
       const o=ctx.createOscillator(), g=ctx.createGain();
-      o.frequency.value=i===2?1046:880; o.connect(g); g.connect(ctx.destination);
+      o.frequency.value = (i%2===0)?880:1175;
+      o.connect(g); g.connect(ctx.destination);
       g.gain.setValueAtTime(0.0001,ctx.currentTime+t);
-      g.gain.exponentialRampToValueAtTime(0.3,ctx.currentTime+t+0.02);
-      g.gain.exponentialRampToValueAtTime(0.0001,ctx.currentTime+t+0.15);
-      o.start(ctx.currentTime+t); o.stop(ctx.currentTime+t+0.16);
+      g.gain.exponentialRampToValueAtTime(0.4,ctx.currentTime+t+0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001,ctx.currentTime+t+0.16);
+      o.start(ctx.currentTime+t); o.stop(ctx.currentTime+t+0.17);
     });
   }catch(e){}
-  // flash title
-  let n=0; const orig=document.title;
-  const h=setInterval(()=>{ document.title = (n++%2===0)?'🔔 '+msg:orig; if(n>10){clearInterval(h); document.title=orig;} },600);
+}
+
+function showOverlay(msg){
+  if(document.getElementById('alertOverlay')) return;
+  const ov=document.createElement('div');
+  ov.id='alertOverlay';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(220,38,38,.92);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;font-family:Segoe UI,sans-serif;animation:pulse 1s infinite;cursor:pointer;text-align:center;padding:20px';
+  ov.innerHTML='<div style="font-size:120px">🍅</div>'+
+    '<div style="font-size:42px;font-weight:700;margin:10px 0">'+msg.replace(/</g,'&lt;')+'</div>'+
+    '<div style="font-size:18px;opacity:.85;margin-top:14px">点击任意位置关闭提醒</div>';
+  const style=document.createElement('style');
+  style.textContent='@keyframes pulse{0%,100%{background:rgba(220,38,38,.92)}50%{background:rgba(234,88,12,.92)}}';
+  document.head.appendChild(style);
+  ov.onclick=stopAlert;
+  document.body.appendChild(ov);
+}
+
+function notify(msg){
+  // stop any previous alert first
+  stopAlert();
+  const origTitle=document.title;
+  let audioCtx=null;
+  try{ audioCtx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){}
+
+  // 1) first notification (this is what makes the taskbar icon flash in Edge/Chrome --app mode)
+  const fireNotif = ()=>{
+    try{
+      if('Notification' in window && Notification.permission==='granted'){
+        const n=new Notification('🍅 Time Tracker', {body:msg, requireInteraction:true, tag:'pomo'});
+        n.onclick=()=>{ try{window.focus()}catch(e){} stopAlert(); n.close(); };
+      }
+    }catch(e){}
+  };
+  fireNotif();
+
+  // 2) loop beep until user dismisses (audio repeats every 2s, up to 30 cycles = ~1 min)
+  if(audioCtx) playBeepBurst(audioCtx);
+  let beepCount=0;
+  const repeatTimer=setInterval(()=>{
+    beepCount++;
+    if(audioCtx) playBeepBurst(audioCtx);
+    if(beepCount>=30){ stopAlert(); }
+  },2200);
+
+  // 3) re-fire system notification every 25s — each one re-flashes the taskbar
+  const notifyTimer=setInterval(fireNotif, 25000);
+
+  // 4) flash title + favicon
+  let n=0;
+  const faviconRed=makeFavicon('#ef4444');
+  const faviconBlue=makeFavicon('#38bdf8');
+  const faviconTimer=setInterval(()=>{
+    document.title = (n%2===0)?'🔔🍅 '+msg:'⏰ '+msg;
+    setFavicon(n%2===0?faviconRed:faviconBlue);
+    n++;
+  },700);
+
+  // 5) overlay shows immediately if window visible; otherwise appears when user returns
+  if(document.visibilityState==='visible' && document.hasFocus()){
+    showOverlay(msg);
+  } else {
+    const onVisible=()=>{
+      if(document.visibilityState==='visible'){
+        showOverlay(msg);
+        document.removeEventListener('visibilitychange', onVisible);
+        window.removeEventListener('focus', onVisible);
+      }
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onVisible);
+  }
+
+  alertState = {msg, audioCtx, repeatTimer, notifyTimer, faviconTimer, origTitle};
 }
 
 let pomoTick=null;
