@@ -323,8 +323,8 @@ const LS_POMO_CFG = 'tt_pomo_cfg_v1';
 function loadPomo(){ try{return JSON.parse(localStorage.getItem(LS_POMO)||'null')}catch(e){return null} }
 function savePomo(p){ p?localStorage.setItem(LS_POMO, JSON.stringify(p)):localStorage.removeItem(LS_POMO) }
 function loadPomoCfg(){
-  try{ return JSON.parse(localStorage.getItem(LS_POMO_CFG)||'null') || {work:25,brk:5,long:15,cycle:4,autoLink:true} }
-  catch(e){ return {work:25,brk:5,long:15,cycle:4,autoLink:true} }
+  try{ return JSON.parse(localStorage.getItem(LS_POMO_CFG)||'null') || {work:25,brk:5,long:15,cycle:4} }
+  catch(e){ return {work:25,brk:5,long:15,cycle:4} }
 }
 function savePomoCfg(c){ localStorage.setItem(LS_POMO_CFG, JSON.stringify(c)) }
 
@@ -333,13 +333,11 @@ function savePomoCfg(c){ localStorage.setItem(LS_POMO_CFG, JSON.stringify(c)) }
   const c=loadPomoCfg();
   $('pomoWork').value=c.work; $('pomoBreak').value=c.brk;
   $('pomoLong').value=c.long; $('pomoCycle').value=c.cycle;
-  $('pomoAutoLink').checked=!!c.autoLink;
-  ['pomoWork','pomoBreak','pomoLong','pomoCycle','pomoAutoLink'].forEach(id=>{
+  ['pomoWork','pomoBreak','pomoLong','pomoCycle'].forEach(id=>{
     $(id).addEventListener('change',()=>{
       savePomoCfg({
         work:+$('pomoWork').value||25, brk:+$('pomoBreak').value||5,
-        long:+$('pomoLong').value||15, cycle:+$('pomoCycle').value||4,
-        autoLink:$('pomoAutoLink').checked
+        long:+$('pomoLong').value||15, cycle:+$('pomoCycle').value||4
       });
     });
   });
@@ -351,28 +349,9 @@ function startPomo(phase){
   const completed = (loadPomo()||{}).completed || 0;
   const p={phase, start:Date.now(), duration:mins*60*1000, completed};
   savePomo(p);
-  // auto-link: start a work timer if not already running
-  if(c.autoLink && phase==='work' && !loadRunning()){
-    const name=($('taskName').value||'').trim();
-    if(name){ start(name, $('taskCategory').value); }
-    else {
-      // prompt only if nothing's running
-      const last = loadEntries().slice(-1)[0];
-      const fallback = last?last.name:'Pomodoro 工作';
-      const r={name:fallback, category:'work', start:Date.now()};
-      saveRunning(r); renderRunning(); renderTodayList();
-    }
-  }
-  if(c.autoLink && phase!=='work'){
-    // stop work timer, start break entry
-    if(loadRunning()) stop();
-    const r={name: phase==='long'?'长休息':'休息', category:'break', start:Date.now()};
-    saveRunning(r); renderRunning(); renderTodayList();
-  }
   renderPomo();
 }
 function stopPomo(){
-  if(loadRunning()) stop();
   savePomo(null); renderPomo();
 }
 function onPomoComplete(){
@@ -386,9 +365,8 @@ function onPomoComplete(){
   } else {
     nextPhase = 'work';
   }
-  notify(p.phase==='work' ? '🍅 工作完成！该休息了' : '⏰ 休息结束，回到工作吧');
-  // stop current and chain into next, but PAUSED so user confirms
-  if(loadRunning()) stop();
+  notify(p.phase==='work' ? '🍅 一个番茄结束，可以歇会儿了' : '⏰ 休息结束');
+  // 番茄钟纯提醒，不动任务计时；停在 waiting 状态等用户决定下一段
   savePomo({phase:nextPhase, start:null, duration:(nextPhase==='work'?c.work:nextPhase==='long'?c.long:c.brk)*60*1000, completed:newCompleted, waiting:true});
   renderPomo();
 }
