@@ -1,2 +1,8 @@
 
 
+__pycache__/
+.build-venv/
+build/
+dist/
+*.spec
+.playwright-cli/
