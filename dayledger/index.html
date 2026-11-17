@@ -10,7 +10,7 @@
     document.documentElement.setAttribute("data-theme", theme);
   })();
 </script>
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="DayLedger 时间账本：本地保存、任务时间表、自定义分类、实时饼图与 Windows 桌面版下载。">
 <title>DayLedger · 时间账本</title>
 <style>
@@ -72,8 +72,49 @@ button:hover,.button:hover{border-color:var(--cp-accent);background:var(--cp-acc
 a{color:var(--cp-link)}:focus-visible{outline:2px solid var(--cp-accent);outline-offset:3px}input,select{padding:9px;border:1px solid var(--cp-border);border-radius:.625rem;background:var(--cp-surface);color:var(--cp-text);max-width:100%}
 header,main,footer{max-width:1440px;margin:auto;padding:24px}header{display:flex;justify-content:space-between;align-items:center;gap:24px;padding-top:36px}h1{font-size:30px;letter-spacing:-1px;margin:0}h2{font-size:19px;margin:0 0 16px}p{margin:6px 0}.eyebrow{font-size:12px;letter-spacing:2px;color:var(--cp-accent);font-weight:700}.muted{color:var(--cp-text-muted)}.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.between{justify-content:space-between}.card{background:var(--cp-surface);border:1px solid var(--cp-border);border-radius:16px;padding:24px}.notice{border-left:3px solid var(--cp-accent);padding:12px 16px;background:var(--cp-accent-soft);border-radius:.625rem;margin:0 0 24px}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin:24px 0}.stats strong{display:block;font-size:26px;margin-top:8px}.layout{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:20px}.table-wrap{overflow:auto;margin-top:18px}table{width:100%;border-collapse:collapse;text-align:left}th{font-size:13px;font-weight:500;color:var(--cp-text-muted);background:var(--cp-surface-soft)}td,th{padding:12px;border-bottom:1px solid var(--cp-border);vertical-align:middle}td input[type=time]{width:118px}td select{max-width:150px}.task-name{min-width:180px;max-width:300px;overflow-wrap:anywhere;white-space:normal;text-align:left;justify-content:flex-start}.task-status{color:var(--cp-text-soft);font-size:12px}.duration{white-space:nowrap;font-family:Consolas,"Courier New",Courier,monospace}.small{font-size:12px}.legend{max-height:360px;overflow:auto}.legend-row{display:flex;align-items:center;gap:8px;padding:7px 0}.legend-row .name{flex:1;overflow-wrap:anywhere}.dot{width:10px;height:10px;flex-shrink:0;border-radius:50%}canvas{display:block;width:256px;height:256px;margin:0 auto 16px}.downloads{margin-top:24px;display:grid;grid-template-columns:1fr 1fr;gap:20px}.downloads .button{margin:12px 8px 8px 0}.error{color:var(--cp-danger)}#message{min-height:28px;margin:14px 0 0}footer{color:var(--cp-text-muted);padding-top:0;font-size:13px}dialog{border:1px solid var(--cp-border);border-radius:16px;background:var(--cp-surface);color:var(--cp-text);padding:28px;width:min(520px,calc(100% - 32px));max-height:90vh;overflow:auto}dialog::backdrop{background:var(--cp-overlay)}dialog form{display:grid;gap:16px}label{display:grid;gap:6px}.dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:8px}.time-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}#report-dialog{width:min(920px,calc(100% - 24px))}#report-content{margin:20px 0}#report-content img{width:256px;height:256px;display:block;margin:auto}.report-chart{display:grid;grid-template-columns:280px 1fr;align-items:center}.icon{padding:5px 9px;min-height:32px}.danger{color:var(--cp-danger)}.empty{text-align:center;padding:40px 12px;color:var(--cp-text-muted)}
 .card{min-width:0}
+body{padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+button,.button,input,select{min-height:44px}input,select{font-size:16px;min-width:0}
+button:disabled{opacity:.5;cursor:default}.icon{min-width:44px;min-height:44px}
+.time-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.time-grid label{min-width:0}.time-grid input{width:100%}
+canvas{max-width:100%;height:auto;aspect-ratio:1}
+.legend-row{min-width:0}.legend-row .name{min-width:0}.legend-row>.small{flex-shrink:0;white-space:nowrap}
+dialog{max-width:calc(100% - 32px - env(safe-area-inset-left) - env(safe-area-inset-right));max-height:calc(100vh - 32px);max-height:calc(100dvh - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom));overscroll-behavior:contain}
+dialog form{grid-template-columns:minmax(0,1fr)}dialog label{min-width:0;grid-template-columns:minmax(0,1fr)}dialog input,dialog select{width:100%}
+/* Contain WebKit's native select text while leaving room for the focus outline. */
+dialog label:has(select){overflow:hidden;padding:6px;margin:-6px}
+#report-content img{max-width:100%;height:auto;aspect-ratio:1}
+.report-chart img{display:block;width:256px;max-width:100%;height:auto;aspect-ratio:1;margin:0 auto 16px}
+.table-help-mobile,.action-label{display:none}
 @media(max-width:1050px){.layout{grid-template-columns:minmax(0,1fr)}.chart-card{display:grid;grid-template-columns:280px 1fr;align-items:start}.chart-card h2,.chart-card>p{grid-column:1/-1}.downloads{grid-template-columns:1fr}}
 @media(max-width:650px){header{align-items:flex-start;flex-direction:column}header,main,footer{padding:16px}.card{padding:16px}.stats{grid-template-columns:1fr 1fr;gap:10px}.stats strong{font-size:21px}.chart-card,.report-chart{display:block}.toolbar .button{flex:1}h1{font-size:26px}.time-grid{gap:8px}}
+@media(max-width:1050px){
+  header{gap:16px}header>.toolbar{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));width:100%;gap:8px}
+  header>.toolbar>*{padding:8px 4px;font-size:14px;min-width:0}
+  .date-toolbar,.date-navigation{width:100%}.date-navigation{display:grid;grid-template-columns:44px minmax(0,1fr) 44px auto;gap:8px}
+  .date-navigation input{width:100%}.date-navigation button{padding:8px}
+  .stats{margin:16px 0}.stats .card{padding:12px}.stats strong{font-size:20px;overflow-wrap:anywhere}
+  .layout{gap:16px}.table-help-desktop{display:none}.table-help-mobile,.action-label{display:inline}
+  .table-wrap{overflow:visible}.entry-table,.entry-table tbody{display:block}
+  .entry-table thead{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip-path:inset(50%)}
+  .entry-table tbody{display:grid;gap:12px}
+  .entry-table tr{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:12px;border:1px solid var(--cp-border);border-radius:.625rem;background:var(--cp-bg-elevated)}
+  .entry-table td{display:block;min-width:0;padding:0;border:0;overflow-wrap:anywhere}
+  .entry-table td[data-label]::before{content:attr(data-label);display:block;margin-bottom:4px;font-size:12px;color:var(--cp-text-muted)}
+  .entry-table .cell-name,.entry-table .cell-category,.entry-table .cell-duration,.entry-table .cell-actions,.entry-table .empty{grid-column:1/-1}
+  .entry-table .cell-name{font-weight:600}.entry-table .cell-name::before{display:none!important}
+  .entry-table input[type=time],.entry-table select,.entry-table .task-name{width:100%;min-width:0;max-width:none}
+  .entry-table .duration{white-space:normal;overflow-wrap:anywhere}
+  .cell-actions .toolbar{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+  .cell-actions button{padding:8px 4px}.cell-actions{padding-top:8px!important;border-top:1px solid var(--cp-border)!important}
+  .backup-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+  .backup-actions button{font-size:13px;padding:8px 4px}
+  .legend{max-height:none}.legend-row{align-items:flex-start}
+  dialog{padding:20px}.dialog-actions>*{flex:1;min-width:0}
+  #report-dialog{padding:16px}#report-content h2{font-size:18px}
+  .downloads{gap:16px;margin-top:16px}.downloads .button{width:100%;margin:12px 0 0}
+  .downloads p,footer{overflow-wrap:anywhere}
+}
+@media(max-width:360px){.date-navigation{grid-template-columns:44px minmax(0,1fr) 44px}.date-navigation #today{grid-column:1/-1}.time-grid{grid-template-columns:minmax(0,1fr)}}
 @media print{header,footer,.no-print,dialog .dialog-actions{display:none!important}.card{border:0}body{background:var(--cp-surface)}}
 </style>
 </head>
@@ -81,9 +122,9 @@ header,main,footer{max-width:1440px;margin:auto;padding:24px}header{display:flex
 <header><div><div class="eyebrow">DAYLEDGER · PRIVATE BY DESIGN</div><h1>时间账本</h1><p class="muted">记录每一段投入，也为休息留白。</p></div><div class="toolbar"><button id="theme" aria-label="切换明暗主题">明暗主题</button><button id="preview">预览日报</button><a class="button" href="#downloads">下载应用 ↓</a></div></header>
 <main>
 <div class="notice small">你的任务只保存在当前浏览器，不上传服务器，也不与其他人的记录混用。请定期导出备份；网页版与桌面版数据不自动同步。</div>
-<div class="toolbar between"><div class="toolbar"><button id="previous" aria-label="前一天">‹</button><input id="day" type="date" aria-label="记录日期"><button id="next" aria-label="后一天">›</button><button id="today">今天</button></div><span class="muted small" id="interval">工作时段 09:00–17:00</span></div>
+<div class="toolbar between date-toolbar"><div class="toolbar date-navigation"><button id="previous" aria-label="前一天">‹</button><input id="day" type="date" aria-label="记录日期"><button id="next" aria-label="后一天">›</button><button id="today">今天</button></div><span class="muted small" id="interval">工作时段 09:00–17:00</span></div>
 <section class="stats" aria-label="时间统计"><div class="card"><span class="muted">已记录覆盖</span><strong id="covered">—</strong></div><div class="card"><span class="muted">休息 / 未记录</span><strong id="rest">—</strong></div><div class="card"><span class="muted">同时进行时段</span><strong id="overlap">—</strong></div><div class="card"><span class="muted">任务数量</span><strong id="count">—</strong></div></section>
-<div class="layout"><section class="card"><div class="toolbar between"><h2>任务清单</h2><button class="primary" id="add-task">＋ 添加任务</button></div><p class="muted small">点击任务名称编辑。时间可直接选择；分类下拉框中可添加自定义分类。窄屏可左右滑动表格。</p><div class="table-wrap"><table><thead><tr><th>任务</th><th>分类</th><th>Start</th><th>Stop</th><th>时长</th><th>操作</th></tr></thead><tbody id="tasks"></tbody></table></div><p id="message" role="status" aria-live="polite"></p><div class="toolbar"><button id="export-json">备份 JSON</button><button id="import-json">导入备份</button><button id="export-csv">导出 CSV</button><input id="import-file" type="file" accept=".json,application/json" hidden></div></section>
+<div class="layout"><section class="card"><div class="toolbar between"><h2>任务清单</h2><button class="primary" id="add-task">＋ 添加任务</button></div><p class="muted small">点击任务名称编辑。时间可直接选择；分类下拉框中可添加自定义分类。<span class="table-help-desktop">宽屏使用表格。</span><span class="table-help-mobile">手机使用任务卡片，无需左右滑动。</span></p><div class="table-wrap"><table class="entry-table" role="table" aria-label="任务清单"><thead role="rowgroup"><tr role="row"><th scope="col" role="columnheader">任务</th><th scope="col" role="columnheader">分类</th><th scope="col" role="columnheader">Start</th><th scope="col" role="columnheader">Stop</th><th scope="col" role="columnheader">时长</th><th scope="col" role="columnheader">操作</th></tr></thead><tbody id="tasks" role="rowgroup"></tbody></table></div><p id="message" role="status" aria-live="polite"></p><div class="toolbar backup-actions"><button id="export-json">备份 JSON</button><button id="import-json">导入备份</button><button id="export-csv">导出 CSV</button><input id="import-file" type="file" accept=".json,application/json" hidden></div></section>
 <aside class="card chart-card"><h2>时间分布</h2><canvas id="chart" width="512" height="512" role="img" aria-label="时间分类饼图，详细数值见下方分类列表"></canvas><div id="legend" class="legend"></div><p class="small muted">重叠时段在同时进行的任务间平分，不重复计时。有 Start 但未填 Stop 的今日任务暂计到现在，不自动修改 Stop。</p></aside></div>
 <section class="downloads" id="downloads"><div class="card"><div class="eyebrow">WINDOWS DESKTOP</div><h2>下载 Windows 免安装版</h2><p>解压后运行 DayLedger.exe，无需安装 Python。支持本机经典 Outlook 工作日 17:00 日报。</p><a class="button primary" href="https://github.com/IrisHeMin/timetracker/releases/latest/download/DayLedger-Windows-x64.zip">下载 Windows x64 ZIP</a><p class="small muted">需 Windows 10/11 x64。自动邮件需要电脑开机、保持登录，并在邮件设置中填写你自己的邮箱、启用和安装计划任务。程序未签名，可能提示未知发布者。</p></div><div class="card"><div class="eyebrow">OFFLINE WEB</div><h2>下载离线网页版</h2><p>一个 HTML 文件即可离线记录、统计和导出日报。无需安装，也不需要登录。</p><a class="button" href="https://github.com/IrisHeMin/timetracker/releases/latest/download/DayLedger-offline.html" download>下载离线 HTML</a><a class="button" href="https://github.com/IrisHeMin/timetracker/releases/latest/download/DayLedger-offline.zip">下载 HTML 压缩包</a><p class="small muted">网页版不能在关闭浏览器后通过 Outlook 自动发送邮件。离线文件与在线页面的浏览器存储独立，请用 JSON 备份迁移。</p></div></section>
 </main>
@@ -92,6 +133,6 @@ header,main,footer{max-width:1440px;margin:auto;padding:24px}header{display:flex
 <dialog id="category-dialog"><form id="category-form"><h2>添加分类</h2><label>新分类名称<input id="category-name" maxlength="40" required autocomplete="off"></label><p id="category-error" class="error" role="alert"></p><div class="dialog-actions"><button type="button" data-close="category-dialog">取消</button><button class="primary" type="submit">保存分类</button></div></form></dialog>
 <dialog id="report-dialog"><div class="toolbar between"><h2>实时日报预览</h2><button data-close="report-dialog">关闭</button></div><div id="report-content"></div><div class="dialog-actions"><button id="save-report" class="primary">下载 HTML 日报</button></div></dialog>
 <script src="ledger.js"></script>
-<script src="ui.js"></script>
+<script src="ui.js?v=1.0.1"></script>
 </body>
 </html>

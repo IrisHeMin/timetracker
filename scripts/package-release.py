@@ -14,7 +14,8 @@ source = (ROOT / "dayledger" / "index.html").read_text(encoding="utf-8")
 for filename in ("ledger.js", "ui.js"):
     script = (ROOT / "dayledger" / filename).read_text(encoding="utf-8")
     script = re.sub(r"</script", r"<\\/script", script, flags=re.IGNORECASE)
-    source = source.replace(f'<script src="{filename}"></script>', f"<script>\n{script}\n</script>")
+    source = re.sub(rf'<script src="{re.escape(filename)}(?:\?[^"]*)?"></script>',
+                    lambda _: f"<script>\n{script}\n</script>", source)
 offline = DIST / "DayLedger-offline.html"
 offline.write_text(source, encoding="utf-8")
 with zipfile.ZipFile(DIST / "DayLedger-offline.zip", "w", zipfile.ZIP_DEFLATED) as archive:

@@ -118,11 +118,13 @@
     body.replaceChildren();
     if (!rows().length) {
       const cell = node("td", "还没有任务。先添加计划，再选择开始和结束时间。", "empty");
+      cell.setAttribute("role", "cell");
       cell.colSpan = 6;
-      const row = node("tr"); row.append(cell); body.append(row);
+      const row = node("tr"); row.setAttribute("role", "row"); row.append(cell); body.append(row);
     }
     rows().forEach(row => {
       const tr = node("tr");
+      tr.setAttribute("role", "row");
       const name = node("button", row.name, "task-name");
       name.onclick = () => openTask(row);
       const category = node("select");
@@ -140,6 +142,7 @@
       const actions = node("div", undefined, "toolbar");
       for (const [label, key] of [["▶", "start"], ["■", "stop"]]) {
         const button = node("button", label, "icon");
+        button.append(node("span", key === "start" ? "开始" : "结束", "action-label"));
         button.title = key === "start" ? "Start 现在" : "Stop 现在";
         button.setAttribute("aria-label", `${row.name} ${button.title}`);
         button.disabled = day !== L.dayKey();
@@ -156,9 +159,13 @@
         }));
       };
       actions.append(remove);
-      for (const child of [name, category, ...times, node("span", spent(row, result, now), "duration"), actions]) {
-        const cell = node("td"); cell.append(child); tr.append(cell);
-      }
+      const fields = ["name", "category", "start", "stop", "duration", "actions"];
+      const labels = ["任务", "分类", "Start", "Stop", "时长", "操作"];
+      [name, category, ...times, node("span", spent(row, result, now), "duration"), actions].forEach((child, index) => {
+        const cell = node("td", undefined, `cell-${fields[index]}`);
+        cell.dataset.label = labels[index]; cell.setAttribute("role", "cell");
+        cell.append(child); tr.append(cell);
+      });
       body.append(tr);
     });
     const selection = $("task-category").value;
@@ -186,14 +193,26 @@
     legend.removeAttribute("id");
     chart.append(image, legend); content.append(chart);
     content.append(node("p", `已记录 ${L.duration(result.covered)}；休息 / 未记录 ${L.duration(result.rest)}；重叠时段 ${L.duration(result.overlap)}。`, "muted"));
-    const table = node("table"), head = node("tr");
-    ["任务", "分类", "Start", "Stop", "原始时长"].forEach(text => head.append(node("th", text)));
-    table.append(head);
+    const table = node("table", undefined, "entry-table"), head = node("tr");
+    table.setAttribute("role", "table"); table.setAttribute("aria-label", "日报任务明细");
+    head.setAttribute("role", "row");
+    const labels = ["任务", "分类", "Start", "Stop", "原始时长"];
+    labels.forEach(text => {
+      const cell = node("th", text); cell.scope = "col"; cell.setAttribute("role", "columnheader"); head.append(cell);
+    });
+    const heading = node("thead"), body = node("tbody");
+    heading.setAttribute("role", "rowgroup"); body.setAttribute("role", "rowgroup");
+    heading.append(head); table.append(heading, body);
     rows().forEach(row => {
       const line = node("tr");
+      line.setAttribute("role", "row");
+      const fields = ["name", "category", "start", "stop", "duration"];
       [row.name, row.category, L.clock(row.start), result.active.has(row.id) ? "进行中" : L.clock(row.stop),
-        spent(row, result, now)].forEach(text => line.append(node("td", text)));
-      table.append(line);
+        spent(row, result, now)].forEach((text, index) => {
+          const cell = node("td", text, `cell-${fields[index]}`);
+          cell.dataset.label = labels[index]; cell.setAttribute("role", "cell"); line.append(cell);
+        });
+      body.append(line);
     });
     const wrap = node("div", undefined, "table-wrap"); wrap.append(table); content.append(wrap);
     content.append(node("p", "饼图按实际经过时间平分重叠时段。进行中任务暂计到现在，不自动修改 Stop。区间外时间不计入饼图。", "muted small"));
